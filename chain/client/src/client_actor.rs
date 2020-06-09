@@ -484,6 +484,17 @@ impl Handler<NetworkClientMessages> for ClientActor {
                 }
                 NetworkClientResponses::NoResponse
             }
+            NetworkClientMessages::PartialEncodedChunkForward(forward) => {
+                match self.client.process_partial_encoded_chunk_forward(forward) {
+                    Ok(accepted_blocks) => self.process_accepted_blocks(accepted_blocks),
+                    // Unknown chunk is normal if we get parts before the header
+                    Err(Error::Chunk(near_chunks::Error::UnknownChunk)) => (),
+                    Err(err) => {
+                        error!(target: "client", "Error processing forwarded chunk: {}", err)
+                    }
+                }
+                NetworkClientResponses::NoResponse
+            }
             NetworkClientMessages::Challenge(challenge) => {
                 match self.client.process_challenge(challenge) {
                     Ok(_) => {}
@@ -833,10 +844,7 @@ impl ClientActor {
                                 missing_chunks,
                                 missing_chunks.iter().map(|header| header.chunk_hash()).collect::<Vec<_>>()
                             );
-                            self.client.shards_mgr.request_chunks(
-                                missing_chunks,
-                                &self.client.chain.header_head().expect("header_head must be available when processing newly produced block").last_block_hash,
-                            );
+                            self.client.shards_mgr.request_chunks(missing_chunks);
                             Ok(())
                         }
                         _ => {
@@ -953,15 +961,7 @@ impl ClientActor {
                         missing_chunks,
                         missing_chunks.iter().map(|header| header.chunk_hash()).collect::<Vec<_>>()
                     );
-                    self.client.shards_mgr.request_chunks(
-                        missing_chunks,
-                        &self
-                            .client
-                            .chain
-                            .header_head()
-                            .expect("header_head should always be available when block is received")
-                            .last_block_hash,
-                    );
+                    self.client.shards_mgr.request_chunks(missing_chunks);
                 }
                 _ => {
                     debug!(target: "client", "Process block: block {} refused by chain: {}", hash, e.kind());
@@ -1282,12 +1282,6 @@ impl ClientActor {
                                 .unwrap()
                                 .drain(..)
                                 .flat_map(|missing_chunks| missing_chunks.into_iter()),
-                            &self
-                                .client
-                                .chain
-                                .header_head()
-                                .expect("header_head must be available during sync")
-                                .last_block_hash,
                         );
 
                         self.client.sync_status =

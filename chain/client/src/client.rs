@@ -19,7 +19,7 @@ use near_chain::{
 };
 use near_chain_configs::ClientConfig;
 use near_chunks::{ProcessPartialEncodedChunkResult, ShardsManager};
-use near_network::types::PartialEncodedChunkResponseMsg;
+use near_network::types::{PartialEncodedChunkForwardMsg, PartialEncodedChunkResponseMsg};
 use near_network::{FullPeerInfo, NetworkAdapter, NetworkClientResponses, NetworkRequests};
 use near_primitives::block::{Approval, ApprovalInner, ApprovalMessage, Block, BlockHeader, Tip};
 use near_primitives::challenge::{Challenge, ChallengeBody};
@@ -681,11 +681,6 @@ impl Client {
                 .unwrap()
                 .drain(..)
                 .flat_map(|missing_chunks| missing_chunks.into_iter()),
-            &self
-                .chain
-                .header_head()
-                .expect("header_head must be available when processing a block")
-                .last_block_hash,
         );
 
         let unwrapped_accepted_blocks = accepted_blocks.write().unwrap().drain(..).collect();
@@ -708,6 +703,28 @@ impl Client {
             PartialEncodedChunk { header, parts: response.parts, receipts: response.receipts };
         self.process_partial_encoded_chunk(partial_chunk)
     }
+
+    pub fn process_partial_encoded_chunk_forward(
+        &mut self,
+        forward: PartialEncodedChunkForwardMsg,
+    ) -> Result<Vec<AcceptedBlock>, Error> {
+        self.shards_mgr.validate_partial_encoded_chunk_forward(&forward)?;
+
+        let header = match self.shards_mgr.get_partial_encoded_chunk_header(&forward.chunk_hash) {
+            Ok(header) => Ok(header),
+            Err(near_chunks::Error::UnknownChunk) => {
+                // We don't know this chunk yet; cache the forwarded part
+                // to be used after we get the header.
+                self.shards_mgr.insert_forwarded_chunk(forward);
+                return Err(Error::Chunk(near_chunks::Error::UnknownChunk));
+            }
+            Err(err) => Err(err),
+        }?;
+        let partial_chunk =
+            PartialEncodedChunk { header, parts: forward.parts, receipts: Vec::new() };
+        self.process_partial_encoded_chunk(partial_chunk)
+    }
+
     pub fn process_partial_encoded_chunk(
         &mut self,
         partial_encoded_chunk: PartialEncodedChunk,
@@ -724,10 +741,7 @@ impl Client {
                 Ok(self.process_blocks_with_missing_chunks(prev_block_hash))
             }
             ProcessPartialEncodedChunkResult::NeedMorePartsOrReceipts(chunk_header) => {
-                self.shards_mgr.request_chunks(
-                    iter::once(*chunk_header),
-                    &self.chain.header_head()?.last_block_hash,
-                );
+                self.shards_mgr.request_chunks(iter::once(*chunk_header));
                 Ok(vec![])
             }
             ProcessPartialEncodedChunkResult::NeedBlock => {
@@ -999,11 +1013,6 @@ impl Client {
                 .unwrap()
                 .drain(..)
                 .flat_map(|missing_chunks| missing_chunks.into_iter()),
-            &self
-                .chain
-                .header_head()
-                .expect("header_head must be avaiable when processing blocks with missing chunks")
-                .last_block_hash,
         );
 
         let unwrapped_accepted_blocks = accepted_blocks.write().unwrap().drain(..).collect();
@@ -1404,7 +1413,6 @@ impl Client {
                             .unwrap()
                             .drain(..)
                             .flat_map(|missing_chunks| missing_chunks.into_iter()),
-                        &self.chain.header_head()?.last_block_hash,
                     );
 
                     let unwrapped_accepted_blocks =

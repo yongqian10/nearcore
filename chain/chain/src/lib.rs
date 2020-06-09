@@ -16,7 +16,7 @@ mod doomslug;
 mod error;
 mod lightclient;
 mod metrics;
-mod store;
+pub mod store;
 pub mod store_validator;
 pub mod test_utils;
 pub mod types;
