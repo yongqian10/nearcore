@@ -2853,7 +2853,10 @@ impl<'a> ChainUpdate<'a> {
         debug!(target: "chain", "{:?} Process block {}, is_caught_up: {}, need_to_start_fetching_state: {}", me, block.hash(), is_caught_up, needs_to_start_fetching_state);
 
         // Check the header is valid before we proceed with the full block.
-        self.process_header_for_block(block.header(), provenance, on_challenge)?;
+        self.process_header_for_block(block.header(), provenance, on_challenge).map_err(|e| {
+            debug!(target: "chain", "Process header for {} failed: {:?}", block.hash(), e);
+            e
+        })?;
 
         self.runtime_adapter.verify_block_vrf(
             &block.header().epoch_id(),
