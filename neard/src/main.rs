@@ -184,6 +184,27 @@ fn main() {
         }
         ("run", Some(args)) => {
             // Load configs from home.
+            unsafe {
+                let mut oldp = [0u8; 100];
+                let mut oldsize = 1;
+                let value = jemalloc_sys::mallctl(
+                    std::ffi::CString::new("opt.retain").unwrap().as_ptr(),
+                    oldp.as_mut_ptr() as _,
+                    &mut oldsize as _,
+                    0 as _,
+                    0,
+                );
+                if value == 0 {
+                    println!("opt.retain: {:?}", &oldp[0..oldsize],);
+                } else {
+                    println!(
+                        "Error! opt.retain: {:?}, oldsize {:?}, ret {:?}",
+                        &oldp[0..oldsize],
+                        oldsize,
+                        errno::Errno(value)
+                    );
+                }
+            }
             let mut near_config = load_config(home_dir);
             validate_genesis(&near_config.genesis);
             // Set current version in client config.
