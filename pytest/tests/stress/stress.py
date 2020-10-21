@@ -23,9 +23,10 @@
 #  [v] `staking`: runs staking transactions for validators. Presently the test doesn't track staking invariants, relying on asserts in the nearcore.
 #                `staking2.py` tests some basic stake invariants
 #  [v] `wipe_data`: only used in conjunction with `node_set` and `node_restart`. If present, nodes data folders will be periodically cleaned on restart
+#  [v] `delay_restart`: only used in conjunction with `node_restart`. If present, will sleep before restarting the node
 # This test also completely disables rewards, which simplifies ensuring total supply invariance and balance invariances
 
-import sys, time, base58, random, inspect, traceback, requests, logging
+import sys, time, base58, random, inspect, traceback, requests, logging, math
 from multiprocessing import Process, Value, Lock
 
 sys.path.append('lib')
@@ -59,6 +60,7 @@ restart_sync_timeout = 30  # for how long to wait for nodes to sync in `node_res
 tx_tolerance = 0.1
 wait_if_restart = False # whether to wait between `kill` and `start`, is needed when nodes are proxied
 wipe_data = False
+delay_restart = False
 
 assert balances_timeout * 2 <= TIMEOUT_SHUTDOWN
 assert block_timeout * 2 <= TIMEOUT_SHUTDOWN
@@ -174,7 +176,14 @@ def monkey_node_restart(stopped, error, nodes, nonces):
             time.sleep(1)
 
         reset_data = wipe_data and random.choice([True, False, False])
-        logging.info("NUKING NODE %s%s" % (node_idx, " AND WIPING ITS STORAGE" if reset_data else ""))
+        sleep = delay_restart and random.choice([True, False, False])
+        sleep_time = 0
+        if sleep:
+            sleep_time = min(-math.log(random.random()) * epoch_length + (epoch_length / 2), 3 * epoch_length)
+        logging.info("NUKING NODE %s%s%s" %
+                     (node_idx,
+                      " AND WIPING ITS STORAGE" if reset_data else "",
+                      (" AND SLEEPING FOR %.2f" % sleep_time) if sleep else ""))
 
         node.kill()
         if reset_data:
@@ -182,6 +191,7 @@ def monkey_node_restart(stopped, error, nodes, nonces):
 
         if wait_if_restart:
             time.sleep(7)
+        time.sleep(sleep_time)
         node.start(boot_node.node_key.pk, boot_node.addr())
         logging.info("NODE %s IS BACK UP" % node_idx)
 
@@ -230,6 +240,10 @@ def monkey_wipe_data(stopped, error, nodes, nonces):
     # no implementation needed, wipe_data is implemented inside node_set and node_restart
     pass
 
+@stress_process
+def monkey_delay_restart(stopped, error, nodes, nonces):
+    # no implementation needed, delay_restart is implemented inside node_restart
+    pass
 
 @stress_process
 def monkey_transactions(stopped, error, nodes, nonces):
@@ -535,7 +549,7 @@ def blocks_tracker(stopped, error, nodes, nonces):
 
 
 def doit(s, n, N, k, monkeys, timeout):
-    global block_timeout, balances_timeout, tx_tolerance, epoch_length, wait_if_restart, wipe_data, restart_sync_timeout
+    global block_timeout, balances_timeout, tx_tolerance, epoch_length, wait_if_restart, wipe_data, restart_sync_timeout, delay_restart
 
     assert 2 <= n <= N
 
@@ -595,6 +609,10 @@ def doit(s, n, N, k, monkeys, timeout):
         # to the sync process.
         restart_sync_timeout = 45 if 'monkey_packets_drop' not in monkey_names else 90
         block_timeout += (10 if 'monkey_packets_drop' not in monkey_names else 40)
+
+    if 'monkey_delay_restart' in monkey_names:
+        assert 'monkey_node_restart' in monkey_names
+        delay_restart = True
 
     # We need to make sure that the blocks that include txs are not garbage collected. From the first tx sent until
     # we check balances time equal to `balances_timeout * 2` passes, and the block production is capped at 1.7/s.

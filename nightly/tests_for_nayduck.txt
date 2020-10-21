@@ -61,6 +61,7 @@ pytest --timeout=2000 stress/stress.py 3 3 3 0 staking transactions local_networ
 pytest --timeout=2000 stress/stress.py 3 3 3 0 staking transactions node_restart
 pytest --timeout=2000 stress/stress.py 3 3 3 0 staking transactions node_restart packets_drop
 pytest --timeout=2000 stress/stress.py 3 3 3 0 staking transactions node_restart wipe_data
+pytest --timeout=2000 stress/stress.py 3 3 3 0 staking transactions node_restart wipe_data delay_restart
 pytest --timeout=2000 stress/stress.py 3 3 3 0 staking transactions node_restart packets_drop wipe_data
 # pytest --timeout=2000 stress/stress.py 3 2 4 0 staking transactions node_set
 
