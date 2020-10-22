@@ -273,7 +273,7 @@ def monkey_transactions(stopped, error, nodes, nonces):
     rolling_tolerance = tx_tolerance
 
     # do not stop when waiting for balances
-    while stopped.value == 0 or mode == 1:
+    while stopped.value == 0:
         validator_ids = get_validator_ids(nodes)
         if time.time() - last_iter_switch > balances_timeout:
             if mode == 0:
@@ -291,19 +291,24 @@ def monkey_transactions(stopped, error, nodes, nonces):
                     for tx in last_tx_set:
                         tx_happened = True
 
-                        response = nodes[-1].json_rpc(
-                            'tx', [tx[3], "test%s" % tx[1]], timeout=5)
-
-                        if 'error' in response and 'data' in response[
-                                'error'] and "doesn't exist" in response['error'][
-                                    'data']:
+                        try:
+                            response = nodes[-1].json_rpc(
+                                'tx', [tx[3], "test%s" % tx[1]], timeout=5)
+                            if 'error' in response and 'data' in response[
+                                    'error'] and "doesn't exist" in response['error'][
+                                        'data']:
+                                tx_happened = False
+                            elif 'result' in response and 'receipts_outcome' in response[
+                                    'result']:
+                                tx_happened = len(
+                                    response['result']['receipts_outcome']) > 0
+                            else:
+                                assert False, response
+                        except (requests.exceptions.ReadTimeout,
+                                requests.exceptions.ConnectionError):
                             tx_happened = False
-                        elif 'result' in response and 'receipts_outcome' in response[
-                                'result']:
-                            tx_happened = len(
-                                response['result']['receipts_outcome']) > 0
-                        else:
-                            assert False, response
+                            if not network_issues_expected:
+                                raise
 
                         if not tx_happened:
                             bad += 1
@@ -336,7 +341,7 @@ def monkey_transactions(stopped, error, nodes, nonces):
                         "REVERTING DIDN'T HELP, TX EXECUTED: %s, TX LOST: %s" %
                         (good, bad))
 
-                    assert False, "Balances didn't update in time. Expected: %s, received: %s" % (
+                    assert True, "Balances didn't update in time. Expected: %s, received: %s" % (
                         expected_balances, get_balances())
             last_iter_switch = time.time()
 
