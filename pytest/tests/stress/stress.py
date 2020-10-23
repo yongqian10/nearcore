@@ -25,7 +25,7 @@
 #  [v] `wipe_data`: only used in conjunction with `node_set` and `node_restart`. If present, nodes data folders will be periodically cleaned on restart
 # This test also completely disables rewards, which simplifies ensuring total supply invariance and balance invariances
 
-import sys, time, base58, random, inspect, traceback, requests, logging
+import sys, time, base58, random, inspect, traceback, requests, logging, math
 from multiprocessing import Process, Value, Lock
 
 sys.path.append('lib')
@@ -53,6 +53,7 @@ SEND_TX_ATTEMPTS = 10
 BLOCK_HEADER_FETCH_HORIZON = 15
 
 epoch_length = 25
+num_blocks_per_year = 31536000
 block_timeout = 20  # if two blocks are not produced within that many seconds, the test will fail. The timeout is increased if nodes are restarted or network is being messed up with
 balances_timeout = 15  # how long to tolerate for balances to update after txs are sent
 restart_sync_timeout = 30  # for how long to wait for nodes to sync in `node_restart`
@@ -151,6 +152,44 @@ def monkey_node_set(stopped, error, nodes, nonces):
                       (" and wiping" if wipe else "", i))
             nodes_stopped[i] = not nodes_stopped[i]
             change_status_at[i] = get_future_time()
+
+
+@stress_process
+def monkey_delayed_restart(stopped, error, nodes, nonces):
+    heights_after_restart = [0 for _ in nodes]
+    while stopped.value == 0:
+        node_idx = len(nodes) - 2
+        boot_node_idx = random.randint(0, len(nodes) - 2)
+        while boot_node_idx == node_idx:
+            boot_node_idx = random.randint(0, len(nodes) - 2)
+        boot_node = nodes[boot_node_idx]
+
+        node = nodes[node_idx]
+
+        reset_data = wipe_data and random.choice([True, False, False])
+        sleep_time = min(-math.log(random.random()) * epoch_length + (epoch_length / 2), 3 * epoch_length)
+        validators = [x['account_id'] for x in nodes[-1].get_status()['validators']]
+        if ('test%s' % node_idx) in validators and len(validators) < 4:
+            sleep_time = 0
+
+        logging.info("NUKING NODE %s%s%s" %
+                     (node_idx,
+                      " AND WIPING ITS STORAGE" if reset_data else "",
+                      " AND SLEEPING FOR %.2f" % sleep_time))
+
+        node.kill()
+        if reset_data:
+            node.reset_data()
+
+        time.sleep(sleep_time)
+        node.start(boot_node.node_key.pk, boot_node.addr())
+        logging.info("NODE %s IS BACK UP" % node_idx)
+
+        _, new_height = get_recent_hash(node, restart_sync_timeout)
+        assert new_height >= heights_after_restart[node_idx]
+        heights_after_restart[node_idx] = new_height
+
+        time.sleep(random.random() * 10)
 
 
 @stress_process
@@ -581,12 +620,12 @@ def doit(s, n, N, k, monkeys, timeout):
             wait_if_restart = True
             balances_timeout += 10
 
-    if 'monkey_node_restart' in monkey_names or 'monkey_node_set' in monkey_names:
+    if 'monkey_node_restart' in monkey_names or 'monkey_node_set' in monkey_names or 'monkey_delayed_restart' in monkey_names:
         balances_timeout += 10
         tx_tolerance += 0.5
 
     if 'monkey_wipe_data' in monkey_names:
-        assert 'monkey_node_restart' in monkey_names or 'monkey_node_set' in monkey_names
+        assert 'monkey_node_restart' in monkey_names or 'monkey_node_set' in monkey_names or 'monkey_delayed_restart' in monkey_names
         wipe_data = True
         balances_timeout += 25
 
@@ -607,6 +646,7 @@ def doit(s, n, N, k, monkeys, timeout):
         N, k + 1, s, config,
         [["min_gas_price", 0], ["max_inflation_rate", [0, 1]],
          ["epoch_length", epoch_length],
+         ["num_blocks_per_year", num_blocks_per_year],
          ["block_producer_kickout_threshold", 10],
          ["chunk_producer_kickout_threshold", 10]], local_config_changes)
 
@@ -627,6 +667,8 @@ def doit(s, n, N, k, monkeys, timeout):
             node.mess_with = True
         else:
             node.mess_with = False
+        if i >= N:
+            node.mess_with = True
 
     stopped = Value('i', 0)
     error = Value('i', 0)
