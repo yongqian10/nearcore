@@ -559,7 +559,7 @@ impl BlockSync {
             let mut peer_iter = highest_height_peers.iter().cycle();
             for block_hash_and_height in hashes_to_request {
                 let request_from_archival =
-                    self.archive && block_hash_and_height.height < gc_stop_height;
+                    block_hash_and_height.height < (header_head.height + gc_stop_height) / 2;
                 let peer = if request_from_archival {
                     archival_peer_iter.next()
                 } else {
