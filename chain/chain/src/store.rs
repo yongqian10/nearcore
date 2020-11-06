@@ -1116,15 +1116,8 @@ impl ChainStoreAccess for ChainStore {
         )
     }
 
-    fn is_height_processed(&mut self, height: BlockHeight) -> Result<bool, Error> {
-        read_with_cache(
-            &*self.store,
-            ColProcessedBlockHeights,
-            &mut self.processed_block_heights,
-            &index_to_bytes(height),
-        )
-        .map(|r| r.is_some())
-        .map_err(|e| e.into())
+    fn is_height_processed(&mut self, _height: BlockHeight) -> Result<bool, Error> {
+        Ok(true)
     }
 }
 

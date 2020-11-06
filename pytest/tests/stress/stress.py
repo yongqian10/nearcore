@@ -204,7 +204,7 @@ def monkey_local_network(stopped, error, nodes, nonces):
     last_time_height_updated = time.time()
 
     while stopped.value == 0:
-        _, cur_height = get_recent_hash(nodes[-1], 15)
+        _, cur_height = get_recent_hash(nodes[-1], 30)
         if cur_height == last_height and time.time() - last_time_height_updated > 10:
             time.sleep(25)
         else:
@@ -331,7 +331,7 @@ def monkey_transactions(stopped, error, nodes, nonces):
             amt = random.randint(0, min_balances[from_])
             nonce_val, nonce_lock = nonces[from_]
 
-            hash_, _ = get_recent_hash(nodes[-1], 15)
+            hash_, _ = get_recent_hash(nodes[-1], 30)
 
             with nonce_lock:
                 tx = sign_payment_tx(nodes[from_].signer_key, 'test%s' % to,
@@ -396,7 +396,7 @@ def monkey_transactions(stopped, error, nodes, nonces):
 
 def get_the_guy_to_mess_up_with(nodes):
     global epoch_length
-    _, height = get_recent_hash(nodes[-1], 15)
+    _, height = get_recent_hash(nodes[-1], 30)
     return (height // epoch_length) % (len(nodes) - 1)
 
 
@@ -407,7 +407,7 @@ def monkey_staking(stopped, error, nodes, nonces):
         whom = random.randint(0, len(nonces) - 2)
 
         status = nodes[-1].get_status()
-        hash_, _ = get_recent_hash(nodes[-1], 15)
+        hash_, _ = get_recent_hash(nodes[-1], 30)
 
         who_can_unstake = get_the_guy_to_mess_up_with(nodes)
 

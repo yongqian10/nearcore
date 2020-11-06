@@ -692,6 +692,8 @@ impl ClientActor {
         let epoch_id =
             self.client.runtime_adapter.get_epoch_id_from_prev_block(&head.last_block_hash)?;
 
+        debug!(target: "client", "Block production. latest_known.height: {}, largest_threshold_height: {}", latest_known.height, self.client.doomslug.get_largest_height_crossing_threshold());
+
         for height in
             latest_known.height + 1..=self.client.doomslug.get_largest_height_crossing_threshold()
         {
@@ -705,11 +707,14 @@ impl ClientActor {
                 let have_all_chunks =
                     head.height == 0 || num_chunks == self.client.runtime_adapter.num_shards();
 
+                debug!(target: "client", "We are the block producer for height {} have_all_chunks: {:?}.", height, have_all_chunks);
+
                 if self.client.doomslug.ready_to_produce_block(
                     Instant::now(),
                     height,
                     have_all_chunks,
                 ) {
+                    debug!(target: "client", "Producing block for height {}.", height);
                     if let Err(err) = self.produce_block(height) {
                         // If there is an error, report it and let it retry on the next loop step.
                         error!(target: "client", "Block production failed: {}", err);
