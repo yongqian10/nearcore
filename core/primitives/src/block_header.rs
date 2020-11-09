@@ -2,6 +2,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
+use deepsize::DeepSizeOf;
 use near_crypto::{KeyType, PublicKey, Signature};
 
 use crate::challenge::ChallengesResult;
@@ -13,7 +14,7 @@ use crate::utils::{from_timestamp, to_timestamp};
 use crate::validator_signer::ValidatorSigner;
 use crate::version::{ProtocolVersion, PROTOCOL_VERSION};
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq, DeepSizeOf)]
 pub struct BlockHeaderInnerLite {
     /// Height of this block.
     pub height: BlockHeight,
@@ -33,7 +34,7 @@ pub struct BlockHeaderInnerLite {
     pub block_merkle_root: CryptoHash,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq, DeepSizeOf)]
 pub struct BlockHeaderInnerRest {
     /// Root hash of the chunk receipts in the given block.
     pub chunk_receipts_root: MerkleHash,
@@ -71,7 +72,7 @@ pub struct BlockHeaderInnerRest {
 }
 
 /// Remove `chunks_included` from V1
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq, DeepSizeOf)]
 pub struct BlockHeaderInnerRestV2 {
     /// Root hash of the chunk receipts in the given block.
     pub chunk_receipts_root: MerkleHash,
@@ -107,14 +108,16 @@ pub struct BlockHeaderInnerRestV2 {
 }
 
 /// The part of the block approval that is different for endorsements and skips
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(
+    BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash, DeepSizeOf,
+)]
 pub enum ApprovalInner {
     Endorsement(CryptoHash),
     Skip(BlockHeight),
 }
 
 /// Block approval by other block producers with a signature
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, DeepSizeOf)]
 pub struct Approval {
     pub inner: ApprovalInner,
     pub target_height: BlockHeight,
@@ -123,14 +126,14 @@ pub struct Approval {
 }
 
 /// The type of approvals. It is either approval from self or from a peer
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, DeepSizeOf)]
 pub enum ApprovalType {
     SelfApproval,
     PeerApproval(PeerId),
 }
 
 /// Block approval by other block producers.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, DeepSizeOf)]
 pub struct ApprovalMessage {
     pub approval: Approval,
     pub target: AccountId,
@@ -173,7 +176,7 @@ impl ApprovalMessage {
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq, DeepSizeOf)]
 #[borsh_init(init)]
 pub struct BlockHeaderV1 {
     pub prev_hash: CryptoHash,
@@ -202,7 +205,7 @@ impl BlockHeaderV1 {
 }
 
 /// V1 -> V2: Remove `chunks_included` from `inner_reset`
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq, DeepSizeOf)]
 #[borsh_init(init)]
 pub struct BlockHeaderV2 {
     pub prev_hash: CryptoHash,
@@ -232,7 +235,7 @@ impl BlockHeaderV2 {
 
 /// Versioned BlockHeader data structure.
 /// For each next version, document what are the changes between versions.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq, DeepSizeOf)]
 pub enum BlockHeader {
     BlockHeaderV1(Box<BlockHeaderV1>),
     BlockHeaderV2(Box<BlockHeaderV2>),

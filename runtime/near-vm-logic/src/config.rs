@@ -1,6 +1,7 @@
 use crate::types::Gas;
 use borsh::{BorshDeserialize, BorshSerialize};
 use core::fmt;
+use deepsize::DeepSizeOf;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -30,7 +31,7 @@ impl Default for VMKind {
     }
 }
 
-#[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq, DeepSizeOf)]
 pub struct VMConfig {
     /// Costs for runtime externals
     pub ext_costs: ExtCostsConfig,
@@ -45,7 +46,7 @@ pub struct VMConfig {
 }
 
 /// Describes limits for VM and Runtime.
-#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq, DeepSizeOf)]
 pub struct VMLimitConfig {
     /// Max amount of gas that can be used, excluding gas attached to promises.
     pub max_gas_burnt: Gas,
@@ -185,7 +186,7 @@ impl Default for VMLimitConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq, DeepSizeOf)]
 pub struct ExtCostsConfig {
     /// Base cost for calling a host function.
     pub base: Gas,

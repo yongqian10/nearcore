@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use borsh::BorshSerialize;
 use cached::{Cached, SizedCache};
 use chrono::{DateTime, Utc};
+use deepsize::DeepSizeOf;
 use log::{debug, error, warn};
 use rand::seq::SliceRandom;
 
@@ -80,7 +81,7 @@ pub enum ProcessPartialEncodedChunkResult {
     NeedBlock,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, DeepSizeOf)]
 struct ChunkRequestInfo {
     height: BlockHeight,
     parent_hash: CryptoHash,
@@ -89,6 +90,7 @@ struct ChunkRequestInfo {
     last_requested: Instant,
 }
 
+#[derive(DeepSizeOf)]
 struct RequestPool {
     retry_duration: Duration,
     switch_to_others_duration: Duration,
@@ -151,7 +153,7 @@ enum Seal<'a> {
     Active(&'a mut ActiveSealDemur),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, DeepSizeOf)]
 struct ActiveSealDemur {
     part_ords: HashSet<u64>,
     chunk_producer: AccountId,
@@ -187,6 +189,7 @@ impl Seal<'_> {
     }
 }
 
+#[derive(DeepSizeOf)]
 pub struct SealsManager {
     me: Option<AccountId>,
     runtime_adapter: Arc<dyn RuntimeAdapter>,
@@ -373,6 +376,7 @@ impl SealsManager {
     }
 }
 
+#[derive(DeepSizeOf)]
 pub struct ShardsManager {
     me: Option<AccountId>,
 

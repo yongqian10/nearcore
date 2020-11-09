@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
+use deepsize::DeepSizeOf;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
 use crate::types::Balance;
 
 /// Data structure for semver version and github tag or commit.
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, DeepSizeOf)]
 pub struct Version {
     pub version: String,
     pub build: String,

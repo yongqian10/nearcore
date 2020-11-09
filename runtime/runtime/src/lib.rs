@@ -2,6 +2,7 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 
 use borsh::BorshSerialize;
+use deepsize::DeepSizeOf;
 use log::debug;
 
 use near_crypto::PublicKey;
@@ -196,6 +197,7 @@ impl Default for ActionResult {
     }
 }
 
+#[derive(DeepSizeOf)]
 pub struct Runtime {}
 
 impl Runtime {

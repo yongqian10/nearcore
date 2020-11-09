@@ -6,6 +6,8 @@ use std::str::FromStr;
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
+use deepsize::{known_deep_size, DeepSizeOf};
+
 use actix::dev::{MessageResponse, ResponseChannel};
 use actix::{Actor, Addr, MailboxError, Message, Recipient};
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -57,7 +59,17 @@ pub const ROUTED_MESSAGE_TTL: u8 = 100;
 pub const UPDATE_INTERVAL_LAST_TIME_RECEIVED_MESSAGE: Duration = Duration::from_secs(60);
 
 /// Peer information.
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(
+    BorshSerialize,
+    BorshDeserialize,
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    DeepSizeOf,
+)]
 pub struct PeerInfo {
     pub id: PeerId,
     pub addr: Option<SocketAddr>,
@@ -131,7 +143,9 @@ impl TryFrom<&str> for PeerInfo {
 
 /// Peer chain information.
 /// TODO: Remove in next version
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Clone, Debug, Eq, PartialEq, Default)]
+#[derive(
+    BorshSerialize, BorshDeserialize, Serialize, Clone, Debug, Eq, PartialEq, Default, DeepSizeOf,
+)]
 pub struct PeerChainInfo {
     /// Chain Id and hash of genesis block.
     pub genesis_id: GenesisId,
@@ -142,7 +156,9 @@ pub struct PeerChainInfo {
 }
 
 /// Peer chain information.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Clone, Debug, Eq, PartialEq, Default)]
+#[derive(
+    BorshSerialize, BorshDeserialize, Serialize, Clone, Debug, Eq, PartialEq, Default, DeepSizeOf,
+)]
 pub struct PeerChainInfoV2 {
     /// Chain Id and hash of genesis block.
     pub genesis_id: GenesisId,
@@ -166,7 +182,7 @@ impl From<PeerChainInfo> for PeerChainInfoV2 {
 }
 
 /// Peer type.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, DeepSizeOf)]
 pub enum PeerType {
     /// Inbound session
     Inbound,
@@ -175,7 +191,7 @@ pub enum PeerType {
 }
 
 /// Peer status.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, DeepSizeOf)]
 pub enum PeerStatus {
     /// Waiting for handshake.
     Connecting,
@@ -185,7 +201,7 @@ pub enum PeerStatus {
     Banned(ReasonForBan),
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub enum HandshakeFailureReason {
     ProtocolVersionMismatch { version: u32, oldest_supported_version: u32 },
     GenesisMismatch(GenesisId),
@@ -200,7 +216,7 @@ impl fmt::Display for HandshakeFailureReason {
 
 impl std::error::Error for HandshakeFailureReason {}
 
-#[derive(BorshSerialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct Handshake {
     pub version: u32,
     /// Oldest supported protocol version.
@@ -219,9 +235,7 @@ pub struct Handshake {
 
 /// Struct describing the layout for Handshake.
 /// It is used to automatically derive BorshDeserialize.
-/// Struct describing the layout for Handshake.
-/// It is used to automatically derive BorshDeserialize.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct HandshakeAutoDes {
     /// Protocol version.
     pub version: u32,
@@ -304,7 +318,7 @@ impl From<HandshakeAutoDes> for Handshake {
 }
 
 // TODO: Remove Handshake V2 in next iteration
-#[derive(BorshSerialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct HandshakeV2 {
     pub version: u32,
     pub oldest_supported_version: u32,
@@ -338,7 +352,7 @@ impl HandshakeV2 {
 
 /// Struct describing the layout for HandshakeV2.
 /// It is used to automatically derive BorshDeserialize.
-#[derive(BorshDeserialize)]
+#[derive(BorshDeserialize, DeepSizeOf)]
 pub struct HandshakeV2AutoDes {
     pub version: u32,
     pub oldest_supported_version: u32,
@@ -410,20 +424,20 @@ impl From<HandshakeV2> for Handshake {
 }
 
 /// Account route description
-#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct AnnounceAccountRoute {
     pub peer_id: PeerId,
     pub hash: CryptoHash,
     pub signature: Signature,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct Ping {
     pub nonce: u64,
     pub source: PeerId,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct Pong {
     pub nonce: u64,
     pub source: PeerId,
@@ -551,13 +565,15 @@ impl Debug for RoutedMessageBody {
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub enum PeerIdOrHash {
     PeerId(PeerId),
     Hash(CryptoHash),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Serialize, Hash)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Serialize, Hash, DeepSizeOf,
+)]
 // Defines the destination for a network request.
 // The request should be sent either to the `account_id` as a routed message, or directly to
 // any peer that tracks the shard.
@@ -577,7 +593,9 @@ impl AccountIdOrPeerTrackingShard {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Serialize, Hash)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Serialize, Hash, DeepSizeOf,
+)]
 pub enum AccountOrPeerIdOrHash {
     AccountId(AccountId),
     PeerId(PeerId),
@@ -697,7 +715,7 @@ impl Message for RoutedMessageFrom {
     type Result = bool;
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct SyncData {
     pub edges: Vec<Edge>,
     pub accounts: Vec<AnnounceAccount>,
@@ -820,14 +838,14 @@ impl PeerMessage {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DeepSizeOf)]
 pub enum BlockedPorts {
     All,
     Some(HashSet<u16>),
 }
 
 /// Configuration for the peer-to-peer manager.
-#[derive(Clone)]
+#[derive(Clone, DeepSizeOf)]
 pub struct NetworkConfig {
     pub public_key: PublicKey,
     pub secret_key: SecretKey,
@@ -953,7 +971,7 @@ impl FromStr for PatternAddr {
 }
 
 /// Status of the known peers.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Eq, PartialEq, Debug, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Eq, PartialEq, Debug, Clone, DeepSizeOf)]
 pub enum KnownPeerStatus {
     Unknown,
     NotConnected,
@@ -971,7 +989,7 @@ impl KnownPeerStatus {
 }
 
 /// Information node stores about known peers.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, DeepSizeOf)]
 pub struct KnownPeerState {
     pub peer_info: PeerInfo,
     pub status: KnownPeerStatus,
@@ -1120,7 +1138,9 @@ where
 }
 
 /// Ban reason.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(
+    BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, Copy, DeepSizeOf,
+)]
 pub enum ReasonForBan {
     None = 0,
     BadBlock = 1,
@@ -1145,7 +1165,7 @@ pub struct Ban {
 }
 
 // TODO(#1313): Use Box
-#[derive(Debug, Clone, PartialEq, strum::AsRefStr)]
+#[derive(Debug, Clone, PartialEq, strum::AsRefStr, DeepSizeOf)]
 #[allow(clippy::large_enum_variant)]
 pub enum NetworkRequests {
     /// Sends block, either when block was just produced or when requested.
@@ -1264,21 +1284,21 @@ impl Message for EdgeList {
 }
 
 /// Combines peer address info, chain and edge information.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, DeepSizeOf)]
 pub struct FullPeerInfo {
     pub peer_info: PeerInfo,
     pub chain_info: PeerChainInfoV2,
     pub edge_info: EdgeInfo,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, DeepSizeOf)]
 pub struct KnownProducer {
     pub account_id: AccountId,
     pub addr: Option<SocketAddr>,
     pub peer_id: PeerId,
 }
 
-#[derive(Debug)]
+#[derive(Debug, DeepSizeOf)]
 pub struct NetworkInfo {
     pub active_peers: Vec<FullPeerInfo>,
     pub num_active_peers: usize,
@@ -1304,7 +1324,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, DeepSizeOf)]
 pub enum NetworkResponses {
     NoResponse,
     RoutingTableInfo(RoutingTableInfo),
@@ -1330,21 +1350,21 @@ impl Message for NetworkRequests {
     type Result = NetworkResponses;
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, Serialize)]
+#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, Serialize, DeepSizeOf)]
 pub struct StateResponseInfoV1 {
     pub shard_id: ShardId,
     pub sync_hash: CryptoHash,
     pub state_response: ShardStateSyncResponseV1,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, Serialize)]
+#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, Serialize, DeepSizeOf)]
 pub struct StateResponseInfoV2 {
     pub shard_id: ShardId,
     pub sync_hash: CryptoHash,
     pub state_response: ShardStateSyncResponse,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, Serialize)]
+#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, Serialize, DeepSizeOf)]
 pub enum StateResponseInfo {
     V1(StateResponseInfoV1),
     V2(StateResponseInfoV2),
@@ -1374,7 +1394,7 @@ impl StateResponseInfo {
 }
 
 #[cfg(feature = "adversarial")]
-#[derive(Debug)]
+#[derive(Debug, DeepSizeOf)]
 pub enum NetworkAdversarialMessage {
     AdvProduceBlocks(u64, bool),
     AdvSwitchToHeight(u64),
@@ -1385,7 +1405,7 @@ pub enum NetworkAdversarialMessage {
     AdvSetSyncInfo(u64),
 }
 
-#[derive(Debug, strum::AsRefStr)]
+#[derive(Debug, strum::AsRefStr, DeepSizeOf)]
 // TODO(#1313): Use Box
 #[allow(clippy::large_enum_variant)]
 pub enum NetworkClientMessages {
@@ -1574,14 +1594,14 @@ impl Message for QueryPeerStats {
     type Result = PeerStatsResult;
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize, Serialize, DeepSizeOf)]
 pub struct PartialEncodedChunkRequestMsg {
     pub chunk_hash: ChunkHash,
     pub part_ords: Vec<u64>,
     pub tracking_shards: HashSet<ShardId>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize, Serialize, DeepSizeOf)]
 pub struct PartialEncodedChunkResponseMsg {
     pub chunk_hash: ChunkHash,
     pub parts: Vec<PartialEncodedChunkPart>,
@@ -1630,7 +1650,7 @@ impl PartialEncodedChunkForwardMsg {
 
 /// Adapter to break dependency of sub-components on the network requests.
 /// For tests use MockNetworkAdapter that accumulates the requests to network.
-pub trait NetworkAdapter: Sync + Send {
+pub trait NetworkAdapter: Sync + Send + DeepSizeOf {
     fn send(
         &self,
         msg: NetworkRequests,
@@ -1642,6 +1662,9 @@ pub trait NetworkAdapter: Sync + Send {
 pub struct NetworkRecipient {
     network_recipient: RwLock<Option<Recipient<NetworkRequests>>>,
 }
+
+// this may be in accurate
+known_deep_size!(0, NetworkRecipient);
 
 unsafe impl Sync for NetworkRecipient {}
 

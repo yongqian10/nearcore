@@ -12,6 +12,7 @@ use std::{fmt, io};
 use borsh::{BorshDeserialize, BorshSerialize};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use cached::{Cached, SizedCache};
+use deepsize::DeepSizeOf;
 
 pub use db::DBCol::{self, *};
 pub use db::{
@@ -38,13 +39,14 @@ pub use crate::trie::{
     update::TrieUpdateValuePtr, KeyForStateChanges, PartialStorage, ShardTries, Trie, TrieChanges,
     WrappedTrieChanges,
 };
+use std::collections::HashMap;
 
 mod db;
 pub mod migrations;
 pub mod test_utils;
 mod trie;
 
-#[derive(Clone)]
+#[derive(Clone, DeepSizeOf)]
 pub struct Store {
     storage: Pin<Arc<dyn Database>>,
 }
@@ -52,6 +54,10 @@ pub struct Store {
 impl Store {
     pub fn new(storage: Pin<Arc<dyn Database>>) -> Store {
         Store { storage }
+    }
+
+    pub fn get_stats(&self) -> HashMap<String, u64> {
+        self.storage.get_stats()
     }
 
     pub fn get(&self, column: DBCol, key: &[u8]) -> Result<Option<Vec<u8>>, io::Error> {
