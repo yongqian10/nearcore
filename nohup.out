@@ -1,0 +1,9 @@
+Usage: nearup run [OPTIONS] [testnet|localnet|mainnet|betanet|crashnet]
+Try "nearup run --help" for help.
+
+Error: Missing argument "[testnet|localnet|mainnet|betanet|crashnet]".  Choose from:
+	testnet,
+	localnet,
+	mainnet,
+	betanet,
+	crashnet.

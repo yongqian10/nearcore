@@ -11,9 +11,13 @@ use std::time::Instant;
 
 use futures;
 use futures::task::Context;
+use near_memory_tracker::allocator::{
+    current_thread_memory_usage, current_thread_peak_memory_usage, reset_memory_usage_max,
+};
 use once_cell::sync::Lazy;
 use std::pin::Pin;
 
+const MEMORY_LIMIT: usize = 512 * 1024 * 1024;
 pub static NTHREADS: AtomicUsize = AtomicUsize::new(0);
 pub(crate) const SLOW_CALL_THRESHOLD: Duration = Duration::from_millis(500);
 const MIN_OCCUPANCY_RATIO_THRESHOLD: f64 = 0.02;
@@ -138,17 +142,45 @@ where
     F: FnOnce(Message) -> Result,
 {
     let now = Instant::now();
+
+    reset_memory_usage_max();
+    let memory_usage = current_thread_memory_usage();
     let result = f(msg);
 
     let took = now.elapsed();
-    if took > SLOW_CALL_THRESHOLD {
+
+    let peak_memory = current_thread_peak_memory_usage() - memory_usage;
+
+    if peak_memory > MEMORY_LIMIT {
         info!(
-            "Function exceeded time limit {}:{} {:?} took: {}ms",
+            "Function exceeded memory limit {}:{} {:?} took: {}ms peak_memory: {}MiB",
             class_name,
             TID.with(|x| *x.borrow()),
             std::any::type_name::<Message>(),
             took.as_millis(),
+            peak_memory / 1024 / 1024
         );
+    }
+
+    if took > SLOW_CALL_THRESHOLD {
+        if peak_memory > 0 {
+            info!(
+                "Function exceeded time limit {}:{} {:?} took: {}ms peak_memory: {}MiB",
+                class_name,
+                TID.with(|x| *x.borrow()),
+                std::any::type_name::<Message>(),
+                took.as_millis(),
+                peak_memory / 1024 / 1024
+            );
+        } else {
+            info!(
+                "Function exceeded time limit {}:{} {:?} took: {}ms",
+                class_name,
+                TID.with(|x| *x.borrow()),
+                std::any::type_name::<Message>(),
+                took.as_millis(),
+            );
+        }
     }
 
     STATS.lock().unwrap().log(class_name, std::any::type_name::<Message>(), 0, took);
