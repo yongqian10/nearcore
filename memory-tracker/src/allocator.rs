@@ -124,7 +124,7 @@ unsafe impl GlobalAlloc for MyAllocator {
             let real_tid = tid;
             if layout.size() >= 1024
                 || rand::thread_rng().gen_range(0, 100) < 1
-                || LAST_SIZE.with(|ls| *ls.borrow()) != layout.size()
+                //|| LAST_SIZE.with(|ls| *ls.borrow()) != layout.size()
             {
                 let size = libc::backtrace(ary.as_ptr() as *mut *mut c_void, 10);
                 for i in 1..min(size as usize, 10) {
