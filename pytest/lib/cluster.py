@@ -38,14 +38,16 @@ class DownloadException(Exception):
 def atexit_cleanup(node):
     print("Cleaning up node %s:%s on script exit" % node.addr())
     print("Executed store validity tests: %s" % node.store_tests)
-    time.sleep(5)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    time.sleep(60)
     try:
         node.cleanup()
     except:
         print("Cleaning failed!")
         traceback.print_exc()
         pass
-    time.sleep(5)
+    time.sleep(60)
 
 
 def atexit_cleanup_remote():
