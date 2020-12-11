@@ -40,14 +40,14 @@ def atexit_cleanup(node):
     print("Executed store validity tests: %s" % node.store_tests)
     sys.stdout.flush()
     sys.stderr.flush()
-    time.sleep(60)
+    time.sleep(10)
     try:
         node.cleanup()
     except:
         print("Cleaning failed!")
         traceback.print_exc()
         pass
-    time.sleep(60)
+    time.sleep(10)
 
 
 def atexit_cleanup_remote():
@@ -151,12 +151,8 @@ class BaseNode(object):
         print(current_time)
         try:
             print("___")
-            print("http://%s:%s/status" % self.rpc_addr())
-            print(os.system("netstat -tulpn | grep LISTEN"))
             r = requests.get("http://%s:%s/status" % self.rpc_addr(), timeout=timeout)
-            print("+++++")
             r.raise_for_status()
-            print("=====")
             status = json.loads(r.content)
             if check_storage and status['sync_info']['syncing'] == False:
                 # Storage is not guaranteed to be in consistent state while syncing
@@ -167,7 +163,7 @@ class BaseNode(object):
             print(current_time)
             print(e)
             print(time.time()-t)
-            time.sleep(10)
+            time.sleep(1)
             raise
         return status
 
