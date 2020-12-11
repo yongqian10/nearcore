@@ -164,6 +164,7 @@ class BaseNode(object):
             print(current_time)
             print(e)
             print(time.time()-t)
+            time.sleep(10)
             raise
         return status
 
