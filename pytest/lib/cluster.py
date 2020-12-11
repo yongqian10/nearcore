@@ -36,7 +36,6 @@ class DownloadException(Exception):
 
 
 def atexit_cleanup(node):
-
     print("Cleaning up node %s:%s on script exit" % node.addr())
     print("Executed store validity tests: %s" % node.store_tests)
     time.sleep(5)
@@ -150,6 +149,8 @@ class BaseNode(object):
         print(current_time)
         try:
             print("___")
+            print("http://%s:%s/status" % self.rpc_addr())
+            print(os.system("netstat -tulpn | grep LISTEN"))
             r = requests.get("http://%s:%s/status" % self.rpc_addr(), timeout=timeout)
             print("+++++")
             r.raise_for_status()
@@ -369,6 +370,7 @@ class LocalNode(BaseNode):
                 print(open(self.stderr_name).read())
 
     def kill(self):
+        print("kill me")
         if self.pid.value != 0:
             os.kill(self.pid.value, signal.SIGKILL)
             self.pid.value = 0
