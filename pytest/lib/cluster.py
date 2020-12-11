@@ -145,17 +145,26 @@ class BaseNode(object):
 
     def get_status(self, check_storage=True, timeout=10):
         t = time.time()
+        tt = time.localtime()
+        current_time = time.strftime("%H:%M:%S", tt)
+        print(current_time)
         try:
+            print("___")
             r = requests.get("http://%s:%s/status" % self.rpc_addr(), timeout=timeout)
+            print("+++++")
             r.raise_for_status()
+            print("=====")
             status = json.loads(r.content)
             if check_storage and status['sync_info']['syncing'] == False:
                 # Storage is not guaranteed to be in consistent state while syncing
                 self.check_store()
         except Exception as e:
+            tt = time.localtime()
+            current_time = time.strftime("%H:%M:%S", tt)
+            print(current_time)
             print(e)
-        finally:
             print(time.time()-t)
+            raise
         return status
 
     def get_all_heights(self):
