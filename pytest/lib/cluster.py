@@ -153,6 +153,7 @@ class BaseNode(object):
             print("___")
             r = requests.get("http://%s:%s/status" % self.rpc_addr(), timeout=timeout)
             r.raise_for_status()
+            print(r.content)
             status = json.loads(r.content)
             if check_storage and status['sync_info']['syncing'] == False:
                 # Storage is not guaranteed to be in consistent state while syncing
