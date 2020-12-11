@@ -120,7 +120,8 @@ class BaseNode(object):
             ]
 
     def wait_for_rpc(self, timeout=1):
-        retrying.retry(lambda: self.get_status(), timeout=timeout)
+        print("Ulala")
+        print(retrying.retry(lambda: self.get_status(), timeout=timeout))
 
     def json_rpc(self, method, params, timeout=2):
         j = {
