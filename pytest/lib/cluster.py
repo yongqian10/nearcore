@@ -36,14 +36,17 @@ class DownloadException(Exception):
 
 
 def atexit_cleanup(node):
+
     print("Cleaning up node %s:%s on script exit" % node.addr())
     print("Executed store validity tests: %s" % node.store_tests)
+    time.sleep(5)
     try:
         node.cleanup()
     except:
         print("Cleaning failed!")
         traceback.print_exc()
         pass
+    time.sleep(5)
 
 
 def atexit_cleanup_remote():
@@ -141,12 +144,18 @@ class BaseNode(object):
                              timeout=timeout)
 
     def get_status(self, check_storage=True, timeout=10):
-        r = requests.get("http://%s:%s/status" % self.rpc_addr(), timeout=timeout)
-        r.raise_for_status()
-        status = json.loads(r.content)
-        if check_storage and status['sync_info']['syncing'] == False:
-            # Storage is not guaranteed to be in consistent state while syncing
-            self.check_store()
+        t = time.time()
+        try:
+            r = requests.get("http://%s:%s/status" % self.rpc_addr(), timeout=timeout)
+            r.raise_for_status()
+            status = json.loads(r.content)
+            if check_storage and status['sync_info']['syncing'] == False:
+                # Storage is not guaranteed to be in consistent state while syncing
+                self.check_store()
+        except Exception as e:
+            print(e)
+        finally:
+            print(time.time()-t)
         return status
 
     def get_all_heights(self):
