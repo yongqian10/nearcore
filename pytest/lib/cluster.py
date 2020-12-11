@@ -1,3 +1,4 @@
+import retrying
 import multiprocessing
 import threading
 import subprocess
@@ -13,7 +14,6 @@ import time
 import base58
 import base64
 import retry
-import retrying
 import rc
 from rc import gcloud
 import traceback
