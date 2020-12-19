@@ -10,7 +10,8 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::mem;
 use std::os::raw::c_void;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::time::Instant;
 
 const ALLOC_LIMIT: usize = 100;
 const REPORT_USAGE_INTERVAL: usize = 512 * 1024 * 1024;
@@ -20,6 +21,7 @@ static JEMALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 static MEM_SIZE: [AtomicUsize; COUNTERS_SIZE as usize] = arr![AtomicUsize::new(0); 16384];
 static MEM_CNT: [AtomicUsize; COUNTERS_SIZE as usize] = arr![AtomicUsize::new(0); 16384];
 static SANITY: AtomicUsize = AtomicUsize::new(0);
+static TIME_SPEND: AtomicU64 = AtomicU64::new(0);
 
 static mut SKIP_PTR: [u8; 1 << 20] = [0; 1 << 20];
 static mut CHECKED_PTR: [u8; 1 << 20] = [0; 1 << 20];
@@ -148,9 +150,17 @@ pub fn reset_memory_usage_max() {
     MEMORY_USAGE_LAST_REPORT.with(|x| *x.borrow_mut() = memory_usage);
 }
 
+pub fn get_time_spend_and_reset() -> u64 {
+    let result = TIME_SPEND.load(Ordering::SeqCst);
+    TIME_SPEND.store(0, Ordering::SeqCst);
+    result
+}
+
 pub struct MyAllocator;
 unsafe impl GlobalAlloc for MyAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let now = Instant::now();
+
         SANITY.fetch_add(1, Ordering::SeqCst);
         let tid = get_tid();
         let memory_usage = MEM_SIZE[tid % COUNTERS_SIZE].load(Ordering::SeqCst);
@@ -288,6 +298,9 @@ unsafe impl GlobalAlloc for MyAllocator {
 
         *(res as *mut AllocHeader) = header;
         SANITY.fetch_sub(1, Ordering::SeqCst);
+
+        let took = now.elapsed();
+        TIME_SPEND.fetch_add(took.as_nanos() as u64, Ordering::SeqCst);
         res.offset(HEADER_SIZE as isize)
     }
 

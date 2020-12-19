@@ -12,7 +12,8 @@ use std::time::Instant;
 use futures;
 use futures::task::Context;
 use near_memory_tracker::allocator::{
-    current_thread_memory_usage, current_thread_peak_memory_usage, reset_memory_usage_max,
+    current_thread_memory_usage, current_thread_peak_memory_usage, get_time_spend_and_reset,
+    reset_memory_usage_max,
 };
 use once_cell::sync::Lazy;
 use std::pin::Pin;
@@ -270,7 +271,12 @@ where
 
 pub fn print_performance_stats(sleep_time: Duration) {
     STATS.lock().unwrap().print_stats(sleep_time);
-    info!("Futures waiting for completition {}", REF_COUNTER.lock().unwrap().len());
+    let memory_tracker_ns = get_time_spend_and_reset();
+    info!(
+        "Futures waiting for competition {} memory-tracker: {}ms",
+        REF_COUNTER.lock().unwrap().len(),
+        memory_tracker_ns / 1000000
+    );
     for entry in REF_COUNTER.lock().unwrap().iter() {
         if *entry.1 > 0 {
             info!("    future {}:{} {}", (entry.0).0, (entry.0).1, entry.1);
